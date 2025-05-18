@@ -1,0 +1,50 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String        @id @default(uuid())
+  name         String
+  email        String        @unique
+  password     String
+  role         String        @default("user")
+  bookings     Booking[]
+  transactions Transaction[]  // <== relasi balik ke Transaction
+  createdAt    DateTime      @default(now())
+}
+
+model Booking {
+  id           String        @id @default(uuid())
+  user         User          @relation(fields: [userId], references: [id])
+  userId       String
+  serviceType  String
+  date         DateTime
+  location     String
+  status       String        @default("pending")
+  transaction  Transaction?  // <== relasi balik satu ke satu
+  createdAt    DateTime      @default(now())
+}
+
+model Service {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  price       Int
+}
+
+model Transaction {
+  id          String   @id @default(uuid())
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+  booking     Booking  @relation(fields: [bookingId], references: [id])
+  bookingId   String   @unique
+  amount      Int
+  method      String   // e.g., "ewallet", "transfer", "cash"
+  status      String   // "pending", "paid", "failed"
+  createdAt   DateTime @default(now())
+}
