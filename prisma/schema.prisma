@@ -12,29 +12,46 @@ model User {
   name         String
   email        String        @unique
   password     String
+  phone        String?
   role         String        @default("user")
-  bookings     Booking[]
-  transactions Transaction[]  // <== relasi balik ke Transaction
   createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  bookings     Booking[]
+  transactions Transaction[]
+  vehicles     Vehicle[]
+  reviews      Review[]
 }
 
 model Booking {
   id           String        @id @default(uuid())
   user         User          @relation(fields: [userId], references: [id])
   userId       String
-  serviceType  String
+  service      Service       @relation(fields: [serviceId], references: [id])
+  serviceId    String
+  vehicle      Vehicle?      @relation(fields: [vehicleId], references: [id])
+  vehicleId    String?
   date         DateTime
+  timeSlot     String        // e.g., "09:00-10:00"
   location     String
-  status       String        @default("pending")
-  transaction  Transaction?  // <== relasi balik satu ke satu
+  status       String        @default("pending") // pending, processing, done, cancelled
+  notes        String?
   createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  transaction  Transaction?
+  statusHistory BookingStatusHistory[]
+  review       Review?
 }
 
 model Service {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   name        String
   description String
   price       Int
+  duration    Int       // durasi dalam menit
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  bookings    Booking[]
 }
 
 model Transaction {
@@ -44,7 +61,47 @@ model Transaction {
   booking     Booking  @relation(fields: [bookingId], references: [id])
   bookingId   String   @unique
   amount      Int
-  method      String   // e.g., "ewallet", "transfer", "cash"
-  status      String   // "pending", "paid", "failed"
+  method      String   // "ewallet", "transfer", "cash"
+  status      String   // "pending", "paid", "failed", "refunded"
+  paymentProof String? // URL atau path ke bukti pembayaran
+  paidAt      DateTime?
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Vehicle {
+  id          String    @id @default(uuid())
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+  brand       String    // Toyota, Honda, dll
+  model       String    // Avanza, Civic, dll
+  year        Int
+  color       String
+  plateNumber String    @unique
+  vehicleType String    // "car", "motorcycle"
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  bookings    Booking[]
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+  bookingId String   @unique
+  rating    Int      // 1-5
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BookingStatusHistory {
+  id        String   @id @default(uuid())
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+  bookingId String
+  status    String   // status yang berubah
+  notes     String?  // catatan perubahan
+  createdAt DateTime @default(now())
 }
