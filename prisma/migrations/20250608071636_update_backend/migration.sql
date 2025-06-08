@@ -14,25 +14,41 @@
 -- AlterTable
 ALTER TABLE "Booking" DROP COLUMN "serviceType",
 ADD COLUMN     "notes" TEXT,
-ADD COLUMN     "serviceId" TEXT NOT NULL,
-ADD COLUMN     "timeSlot" TEXT NOT NULL,
-ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL,
+ADD COLUMN     "serviceId" TEXT,
+ADD COLUMN     "timeSlot" TEXT,
+ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 ADD COLUMN     "vehicleId" TEXT;
+
+-- Update existing bookings with default values
+UPDATE "Booking" SET
+  "serviceId" = (SELECT "id" FROM "Service" LIMIT 1),
+  "timeSlot" = '09:00-10:00'
+WHERE "serviceId" IS NULL OR "timeSlot" IS NULL;
+
+-- Make columns NOT NULL after setting default values
+ALTER TABLE "Booking" ALTER COLUMN "serviceId" SET NOT NULL;
+ALTER TABLE "Booking" ALTER COLUMN "timeSlot" SET NOT NULL;
 
 -- AlterTable
 ALTER TABLE "Service" ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-ADD COLUMN     "duration" INTEGER NOT NULL,
+ADD COLUMN     "duration" INTEGER,
 ADD COLUMN     "isActive" BOOLEAN NOT NULL DEFAULT true,
-ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL;
+ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+-- Update existing services with default duration
+UPDATE "Service" SET "duration" = 30 WHERE "duration" IS NULL;
+
+-- Make duration NOT NULL after setting default values
+ALTER TABLE "Service" ALTER COLUMN "duration" SET NOT NULL;
 
 -- AlterTable
 ALTER TABLE "Transaction" ADD COLUMN     "paidAt" TIMESTAMP(3),
 ADD COLUMN     "paymentProof" TEXT,
-ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL;
+ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 -- AlterTable
 ALTER TABLE "User" ADD COLUMN     "phone" TEXT,
-ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL;
+ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 -- CreateTable
 CREATE TABLE "Vehicle" (

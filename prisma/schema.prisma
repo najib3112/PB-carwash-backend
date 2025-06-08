@@ -1,10 +1,10 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-}
-
-generator client {
-  provider = "prisma-client-js"
 }
 
 model User {
@@ -12,34 +12,34 @@ model User {
   name         String
   email        String        @unique
   password     String
-  phone        String?
   role         String        @default("user")
   createdAt    DateTime      @default(now())
+  phone        String?
   updatedAt    DateTime      @updatedAt
   bookings     Booking[]
+  reviews      Review[]
   transactions Transaction[]
   vehicles     Vehicle[]
-  reviews      Review[]
 }
 
 model Booking {
-  id           String        @id @default(uuid())
-  user         User          @relation(fields: [userId], references: [id])
-  userId       String
-  service      Service       @relation(fields: [serviceId], references: [id])
-  serviceId    String
-  vehicle      Vehicle?      @relation(fields: [vehicleId], references: [id])
-  vehicleId    String?
-  date         DateTime
-  timeSlot     String        // e.g., "09:00-10:00"
-  location     String
-  status       String        @default("pending") // pending, processing, done, cancelled
-  notes        String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  transaction  Transaction?
+  id            String                 @id @default(uuid())
+  userId        String
+  date          DateTime
+  location      String
+  status        String                 @default("pending")
+  createdAt     DateTime               @default(now())
+  notes         String?
+  serviceId     String
+  timeSlot      String
+  updatedAt     DateTime               @updatedAt
+  vehicleId     String?
+  service       Service                @relation(fields: [serviceId], references: [id])
+  user          User                   @relation(fields: [userId], references: [id])
+  vehicle       Vehicle?               @relation(fields: [vehicleId], references: [id])
   statusHistory BookingStatusHistory[]
-  review       Review?
+  review        Review?
+  transaction   Transaction?
 }
 
 model Service {
@@ -47,61 +47,61 @@ model Service {
   name        String
   description String
   price       Int
-  duration    Int       // durasi dalam menit
-  isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
+  duration    Int
+  isActive    Boolean   @default(true)
   updatedAt   DateTime  @updatedAt
   bookings    Booking[]
 }
 
 model Transaction {
-  id          String   @id @default(uuid())
-  user        User     @relation(fields: [userId], references: [id])
-  userId      String
-  booking     Booking  @relation(fields: [bookingId], references: [id])
-  bookingId   String   @unique
-  amount      Int
-  method      String   // "ewallet", "transfer", "cash"
-  status      String   // "pending", "paid", "failed", "refunded"
-  paymentProof String? // URL atau path ke bukti pembayaran
-  paidAt      DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String    @id @default(uuid())
+  userId       String
+  bookingId    String    @unique
+  amount       Int
+  method       String
+  status       String
+  createdAt    DateTime  @default(now())
+  paidAt       DateTime?
+  paymentProof String?
+  updatedAt    DateTime  @updatedAt
+  booking      Booking   @relation(fields: [bookingId], references: [id])
+  user         User      @relation(fields: [userId], references: [id])
 }
 
 model Vehicle {
   id          String    @id @default(uuid())
-  user        User      @relation(fields: [userId], references: [id])
   userId      String
-  brand       String    // Toyota, Honda, dll
-  model       String    // Avanza, Civic, dll
+  brand       String
+  model       String
   year        Int
   color       String
   plateNumber String    @unique
-  vehicleType String    // "car", "motorcycle"
+  vehicleType String
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   bookings    Booking[]
+  user        User      @relation(fields: [userId], references: [id])
 }
 
 model Review {
   id        String   @id @default(uuid())
-  user      User     @relation(fields: [userId], references: [id])
   userId    String
-  booking   Booking  @relation(fields: [bookingId], references: [id])
   bookingId String   @unique
-  rating    Int      // 1-5
+  rating    Int
   comment   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model BookingStatusHistory {
   id        String   @id @default(uuid())
-  booking   Booking  @relation(fields: [bookingId], references: [id])
   bookingId String
-  status    String   // status yang berubah
-  notes     String?  // catatan perubahan
+  status    String
+  notes     String?
   createdAt DateTime @default(now())
+  booking   Booking  @relation(fields: [bookingId], references: [id])
 }
