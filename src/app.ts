@@ -1,4 +1,3 @@
-import { PrismaClient } from '@prisma/client';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
@@ -16,21 +15,22 @@ dotenv.config();
 
 const app = express();
 
-// Initialize Prisma Client
-const prisma = new PrismaClient();
-
-// Test database connection
-async function testDatabaseConnection() {
+// Initialize database connection (non-blocking)
+async function initDatabase() {
   try {
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
     await prisma.$connect();
-    console.log('✅ Database connected successfully');
+    console.log('🎉 Database ready for requests');
+    return true;
   } catch (error) {
     console.error('❌ Database connection failed:', error);
-    // Don't exit, let the app start anyway for Railway deployment
+    console.log('⚠️ Starting without database connection');
+    return false;
   }
 }
 
-testDatabaseConnection();
+initDatabase();
 
 // Middleware
 app.use(cors());
@@ -38,13 +38,52 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(requestLogger);
 
+// Simple database check middleware
+app.use('/api', async (req, res, next) => {
+  // Skip database check for health endpoint
+  if (req.path === '/health') {
+    return next();
+  }
+
+  try {
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    await prisma.$queryRaw`SELECT 1`;
+    next();
+  } catch (error) {
+    console.error('Database connection error:', error);
+    res.status(503).json({
+      success: false,
+      error: 'Database temporarily unavailable',
+      message: 'Please try again later',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Health check endpoint
-app.get('/health', (_req, res) => {
-  res.status(200).json({
+app.get('/health', async (_req, res) => {
+  const health = {
     status: 'OK',
     message: 'Carwash Backend API is running',
-    timestamp: new Date().toISOString()
-  });
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    version: '1.0.0',
+    database: 'unknown'
+  };
+
+  try {
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    await prisma.$queryRaw`SELECT 1`;
+    health.database = 'connected';
+  } catch (error) {
+    health.database = 'disconnected';
+    health.status = 'DEGRADED';
+  }
+
+  const statusCode = health.database === 'connected' ? 200 : 503;
+  res.status(statusCode).json(health);
 });
 
 // API Routes
@@ -62,7 +101,14 @@ app.use(errorHandler);
 
 // Graceful shutdown
 process.on('beforeExit', async () => {
-  await prisma.$disconnect();
+  try {
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    await prisma.$disconnect();
+    console.log('✅ Database disconnected');
+  } catch (error) {
+    console.error('Error disconnecting database:', error);
+  }
 });
 
 export default app;
